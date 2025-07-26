@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>จำลองเดารหัส Wi-Fi</title>
+</head>
+<body>
+    <h1>จำลองเดารหัส Wi-Fi</h1>
+    <p>ระบบจะเดารหัสความยาว 8 ตัว จากตัวเลข หรือ ตัวเลข+ตัวอักษร จนเจอรหัสที่คุณกำหนดไว้</p>
+
+    <label for="ssid">ชื่อ Wi-Fi:</label>
+    <input type="text" id="ssid" placeholder="ชื่อ Wi-Fi เช่น mywifi"><br><br>
+
+    <label for="targetPassword">รหัสจริง (8 ตัว):</label>
+    <input type="password" id="targetPassword" placeholder="เช่น 24ABzz98" maxlength="8"><br><br>
+
+    <label><input type="checkbox" id="useLetters"> ใช้ตัวอักษรภาษาอังกฤษด้วย</label><br><br>
+
+    <button onclick="startBruteForce()" id="startBtn">เริ่มเดารหัส</button>
+    <button onclick="stopBruteForce()" id="stopBtn" style="display: none;">หยุดเดารหัส</button>
+
+    <p id="status"></p>
+
+    <script>
+        let running = false;
+        let attemptCount = 0;
+        let charset = "0123456789";
+        const maxLength = 8;
+
+        const status = document.getElementById("status");
+        const stopBtn = document.getElementById("stopBtn");
+        const startBtn = document.getElementById("startBtn");
+
+        function startBruteForce() {
+            const ssid = document.getElementById("ssid").value.trim();
+            const correctPassword = document.getElementById("targetPassword").value.trim();
+            const useLetters = document.getElementById("useLetters").checked;
+
+            if (!ssid) {
+                alert("กรุณากรอกชื่อ Wi-Fi");
+                return;
+            }
+
+            if (correctPassword.length !== maxLength) {
+                alert(`กรุณากรอกรหัสที่แท้จริงให้ถูกต้อง (${maxLength} ตัว)`);
+                return;
+            }
+
+            charset = "0123456789";
+            if (useLetters) {
+                charset += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            }
+
+            attemptCount = 0;
+            running = true;
+            status.textContent = `เริ่มเดารหัสของ "${ssid}"...`;
+            stopBtn.style.display = "inline";
+            startBtn.disabled = true;
+
+            // เริ่ม brute force
+            bruteForce("", maxLength, correctPassword, ssid);
+        }
+
+        function stopBruteForce() {
+            running = false;
+            stopBtn.style.display = "none";
+            startBtn.disabled = false;
+
+            const ssid = document.getElementById("ssid").value.trim();
+            status.textContent = `⛔ หยุดเดารหัสของ "${ssid}" (เดาไปแล้ว ${attemptCount} ครั้ง)`;
+        }
+
+        function bruteForce(prefix, length, correctPassword, ssid) {
+            if (!running) return;
+
+            if (prefix.length === length) {
+                attemptCount++;
+                if (attemptCount % 1000 === 0) {
+                    status.textContent = `🔍 Wi-Fi "${ssid}" → ลองรหัส: ${prefix}`;
+                }
+
+                if (prefix === correctPassword) {
+                    status.textContent = `✅ เจอรหัสของ "${ssid}": ${prefix} (พยายาม ${attemptCount} ครั้ง)`;
+                    running = false;
+                    stopBtn.style.display = "none";
+                    startBtn.disabled = false;
+                    return;
+                }
+
+                // รอรอบถัดไป
+                if (attemptCount % 10000 === 0) {
+                    setTimeout(() => bruteForceNext(prefix, length, correctPassword, ssid), 0);
+                } else {
+                    bruteForceNext(prefix, length, correctPassword, ssid);
+                }
+
+                return;
+            }
+
+            bruteForceNext(prefix, length, correctPassword, ssid);
+        }
+
+        function bruteForceNext(prefix, length, correctPassword, ssid) {
+            for (let i = 0; i < charset.length; i++) {
+                if (!running) return;
+                bruteForce(prefix + charset[i], length, correctPassword, ssid);
+            }
+        }
+    </script>
+</body>
+</html>
